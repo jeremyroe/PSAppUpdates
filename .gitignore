@@ -1,0 +1,17 @@
+# Logs
+*.log
+TestResults.log
+
+# PowerShell Studio
+*.TempPoint.*
+*.psprojs
+*.psproj
+*.suo
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Operating System
+.DS_Store
+Thumbs.db 

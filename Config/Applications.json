@@ -1,0 +1,36 @@
+{
+    "AdobeReader": {
+        "displayName": "Adobe Acrobat Reader DC",
+        "wingetId": "Adobe.Acrobat.Reader.64-bit",
+        "detection": {
+            "programName": "Adobe Acrobat Reader DC",
+            "legacyNames": ["Adobe Reader X", "Adobe Reader XI"]
+        },
+        "processNames": ["AcroRd32.exe", "Acrobat.exe"],
+        "legacyAction": "uninstall"
+    },
+    "Chrome": {
+        "displayName": "Google Chrome",
+        "wingetId": "Google.Chrome",
+        "detection": {
+            "programName": "Google Chrome"
+        },
+        "processNames": ["chrome.exe"]
+    },
+    "Firefox": {
+        "displayName": "Mozilla Firefox",
+        "wingetId": "Mozilla.Firefox",
+        "detection": {
+            "programName": "Mozilla Firefox"
+        },
+        "processNames": ["firefox.exe"]
+    },
+    "FirefoxESR": {
+        "displayName": "Mozilla Firefox ESR",
+        "wingetId": "Mozilla.Firefox.ESR",
+        "detection": {
+            "programName": "Mozilla Firefox ESR"
+        },
+        "processNames": ["firefox.exe"]
+    }
+} 
