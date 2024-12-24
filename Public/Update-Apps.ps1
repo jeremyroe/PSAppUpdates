@@ -15,7 +15,6 @@ function Update-Apps {
     )
     
     try {
-        # Check prerequisites directly
         Write-Verbose "Checking prerequisites..."
         Install-Prerequisites
         
@@ -39,13 +38,25 @@ function Update-Apps {
                 continue
             }
             
+            # Get current version
+            $currentVersion = ($installed -split '\|')[1]
+            Write-Verbose "$($config.displayName) current version: $currentVersion"
+            
+            # Check for updates
             $outdated = choco outdated $config.packageId -r
             if ($outdated -match $config.packageId) {
+                $availableVersion = ($outdated -split '\|')[3]
+                Write-Verbose "$($config.displayName) has update available: $currentVersion -> $availableVersion"
                 $updatesNeeded += @{
                     Name = $app
                     DisplayName = $config.displayName
                     PackageId = $config.packageId
+                    CurrentVersion = $currentVersion
+                    AvailableVersion = $availableVersion
                 }
+            }
+            else {
+                Write-Verbose "$($config.displayName) is up to date (version $currentVersion)"
             }
         }
         
@@ -57,19 +68,19 @@ function Update-Apps {
         # Show what we're going to do
         Write-Verbose "`nUpdate Summary:"
         foreach ($app in $updatesNeeded) {
-            Write-Verbose "  $($app.DisplayName): Update available"
+            Write-Verbose "  $($app.DisplayName): $($app.CurrentVersion) -> $($app.AvailableVersion)"
         }
 
         # Perform updates
         foreach ($app in $updatesNeeded) {
-            if ($PSCmdlet.ShouldProcess($app.DisplayName, "Update application")) {
+            if ($PSCmdlet.ShouldProcess($app.DisplayName, "Update from $($app.CurrentVersion) to $($app.AvailableVersion)")) {
                 Write-Verbose "Updating $($app.DisplayName)..."
                 try {
                     $result = choco upgrade $app.PackageId -y
                     Write-Verbose $result
                 }
                 catch {
-                    Write-Warning "Failed to update $($app.DisplayName): $_"
+                    Write-Warning "Failed to update $($app.DisplayName): $($_.Exception.Message)"
                 }
             }
         }
