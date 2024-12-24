@@ -4,4 +4,4 @@ PowerShell module for managing Windows application updates using winget and osqu
 
 ## Installation
 
-### Direct from GitHub 
+### Option 1: Direct Installation Script 
