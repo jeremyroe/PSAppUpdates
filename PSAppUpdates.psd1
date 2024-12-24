@@ -7,9 +7,9 @@
     PowerShellVersion = '5.1'
     RequiredModules = @()
     FunctionsToExport = @(
+        'Test-AppUpdates',
         'Update-Apps',
-        'Get-SupportedApps',
-        'Test-AppUpdates'
+        'Get-SupportedApps'
     )
     PrivateData = @{
         PSData = @{

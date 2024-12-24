@@ -27,9 +27,14 @@ function Install-Prerequisites {
     
     # Check for osquery
     try {
-        $osqueryCmd = Get-Command osqueryi -ErrorAction Stop
-        if ($osqueryCmd) {
-            $currentVersion = & osqueryi --version
+        $osqueryPath = "${env:ProgramFiles}\osquery"
+        if (Test-Path "${env:ProgramFiles(x86)}\osquery") {
+            $osqueryPath = "${env:ProgramFiles(x86)}\osquery"
+        }
+        
+        $osqueryExe = Join-Path $osqueryPath "osqueryi.exe"
+        if (Test-Path $osqueryExe) {
+            $currentVersion = & $osqueryExe --version
             Write-Verbose "Found OSQuery version: $currentVersion"
             
             # Get latest version from osquery.io

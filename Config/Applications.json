@@ -3,11 +3,9 @@
         "displayName": "Adobe Acrobat Reader DC",
         "wingetId": "Adobe.Acrobat.Reader.64-bit",
         "detection": {
-            "programName": "Adobe Acrobat Reader DC",
-            "legacyNames": ["Adobe Reader X", "Adobe Reader XI"]
+            "programName": "Adobe Acrobat Reader DC"
         },
-        "processNames": ["AcroRd32.exe", "Acrobat.exe"],
-        "legacyAction": "uninstall"
+        "processNames": ["AcroRd32.exe", "Acrobat.exe"]
     },
     "Chrome": {
         "displayName": "Google Chrome",
