@@ -38,7 +38,7 @@ function Test-AppUpdates {
             Write-Verbose "  Checking $app..."
             $config = Get-AppConfig -Application $app
             if (-not $config) {
-                Write-Warning "  $app: Not supported"
+                Write-Warning "Application '$app' not supported"
                 continue
             }
             
