@@ -34,7 +34,8 @@ function Install-Prerequisites {
         
         $osqueryExe = Join-Path $osqueryPath "osqueryi.exe"
         if (Test-Path $osqueryExe) {
-            $currentVersion = & $osqueryExe --version
+            # Get current version (strip 'osqueryi.exe version ' from start)
+            $currentVersion = (& $osqueryExe --version).Replace('osqueryi.exe version ', '')
             Write-Verbose "Found OSQuery version: $currentVersion"
             
             # Get latest version from osquery.io
