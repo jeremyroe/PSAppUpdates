@@ -68,11 +68,21 @@ function Install-Prerequisites {
     catch {
         Write-Warning "OSQuery not found or update failed. Installing..."
         try {
-            $result = choco install osquery -y
-            Write-Verbose $result
+            # Capture and format the output properly
+            $chocoOutput = choco install osquery -y
+            
+            # Check if installation was successful
+            if ($LASTEXITCODE -eq 0) {
+                Write-Verbose "OSQuery installed successfully"
+                Write-Verbose ($chocoOutput -join "`n")
+            }
+            else {
+                throw "Chocolatey installation failed with exit code: $LASTEXITCODE"
+            }
         }
         catch {
-            throw "Failed to install OSQuery: $_"
+            $errorMsg = if ($_.Exception.Message) { $_.Exception.Message } else { "Unknown error during OSQuery installation" }
+            throw "Failed to install OSQuery: $errorMsg"
         }
     }
 } 
