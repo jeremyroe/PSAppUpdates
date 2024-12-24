@@ -42,7 +42,26 @@ function Update-Apps {
             $currentVersion = ($installed -split '\|')[1]
             Write-Verbose "$($config.displayName) current version: $currentVersion"
             
-            # Check for updates
+            # Special handling for OSQuery version check
+            if ($app -eq 'OSQuery') {
+                # Get latest version from GitHub
+                $latestVersion = (Invoke-RestMethod -Uri "https://api.github.com/repos/osquery/osquery/releases/latest").tag_name.TrimStart('v')
+                Write-Verbose "Latest OSQuery version available: $latestVersion"
+                
+                if ([version]$currentVersion -lt [version]$latestVersion) {
+                    Write-Verbose "$($config.displayName) has update available: $currentVersion -> $latestVersion"
+                    $updatesNeeded += @{
+                        Name = $app
+                        DisplayName = $config.displayName
+                        PackageId = $config.packageId
+                        CurrentVersion = $currentVersion
+                        AvailableVersion = $latestVersion
+                    }
+                }
+                continue
+            }
+            
+            # Regular Chocolatey version check for other apps
             $outdated = choco outdated $config.packageId -r
             if ($outdated -match $config.packageId) {
                 # Parse the outdated string correctly
@@ -132,4 +151,5 @@ function Update-Apps {
 
 .NOTES
     Requires administrative rights and Chocolatey package manager.
+#> 
 #> 
