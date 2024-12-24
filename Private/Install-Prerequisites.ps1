@@ -6,65 +6,39 @@ function Install-Prerequisites {
     
     # Check for winget
     try {
-        $null = Get-Command winget -ErrorAction Stop
-        Write-Verbose "Winget is installed"
+        $wingetPath = "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe"
+        
+        # Get latest version folder
+        $wingetDir = Get-ChildItem -Path $wingetPath -ErrorAction Stop | 
+            Sort-Object LastWriteTime -Descending | 
+            Select-Object -First 1
+            
+        if (-not $wingetDir) {
+            throw "Winget installation not found"
+        }
+
+        # Ensure system account has access
+        if ([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
+            $acl = Get-Acl $wingetDir.FullName
+            $systemSid = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::LocalSystemSid, $null)
+            $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($systemSid, "ReadAndExecute", "ContainerInherit,ObjectInherit", "None", "Allow")
+            
+            if (-not ($acl.Access | Where-Object { $_.IdentityReference -eq $systemSid })) {
+                $acl.AddAccessRule($rule)
+                Set-Acl $wingetDir.FullName $acl
+            }
+        }
+
+        $wingetExe = Join-Path $wingetDir.FullName "winget.exe"
+        Write-Verbose "Using winget from: $wingetExe"
+        $env:Path = "$($wingetDir.FullName);$env:Path"
+
+        # Verify winget works
+        $null = & $wingetExe --version
+        Write-Verbose "Winget is operational"
     }
     catch {
-        Write-Warning "Winget not found. Checking alternative methods..."
-        try {
-            # First try finding winget in standard locations
-            $wingetPaths = @(
-                "${env:ProgramFiles}\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe\winget.exe",
-                "${env:LocalAppData}\Microsoft\WindowsApps\winget.exe"
-            )
-            
-            $wingetExe = Get-ChildItem -Path $wingetPaths[0] -ErrorAction SilentlyContinue | 
-                Sort-Object LastWriteTime -Descending | 
-                Select-Object -First 1 -ExpandProperty FullName
-            
-            if ($wingetExe) {
-                # Add to PATH
-                $wingetDir = Split-Path $wingetExe -Parent
-                $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-                if ($currentPath -notlike "*$wingetDir*") {
-                    Write-Verbose "Adding winget directory to system PATH..."
-                    $newPath = "$currentPath;$wingetDir"
-                    [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
-                    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine")
-                }
-                Write-Verbose "Found existing winget installation"
-                return
-            }
-
-            # If running as system, we need a different approach
-            if ([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
-                Write-Warning "Running as SYSTEM account. Attempting to use pre-installed winget..."
-                
-                # Try to find any user's winget installation
-                $userProfiles = Get-ChildItem "C:\Users" -Directory
-                foreach ($profile in $userProfiles) {
-                    $userWinget = Join-Path $profile.FullName "AppData\Local\Microsoft\WindowsApps\winget.exe"
-                    if (Test-Path $userWinget) {
-                        Write-Verbose "Found winget in user profile: $userWinget"
-                        # Add to system PATH
-                        $wingetDir = Split-Path $userWinget -Parent
-                        $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-                        if ($currentPath -notlike "*$wingetDir*") {
-                            [Environment]::SetEnvironmentVariable("Path", "$currentPath;$wingetDir", "Machine")
-                            $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine")
-                        }
-                        return
-                    }
-                }
-                
-                throw "Unable to find winget installation. Please ensure winget is installed on the system."
-            }
-
-            # Interactive user installation code here...
-        }
-        catch {
-            throw "Failed to find winget: $_"
-        }
+        throw "Winget prerequisite not met: $_. Please ensure winget is installed system-wide via GPO/SCCM/Intune."
     }
     
     # Check for osquery
@@ -172,6 +146,24 @@ function Install-Prerequisites {
         }
         catch {
             throw "Failed to install osquery: $_"
+        }
+    }
+    
+    # Check for Chocolatey
+    try {
+        $null = Get-Command choco -ErrorAction Stop
+        Write-Verbose "Chocolatey is installed"
+    }
+    catch {
+        Write-Warning "Chocolatey not found. Installing..."
+        try {
+            $installScript = Join-Path $env:TEMP "install-choco.ps1"
+            Set-ExecutionPolicy Bypass -Scope Process -Force
+            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        }
+        catch {
+            throw "Failed to install Chocolatey: $_"
         }
     }
 } 
