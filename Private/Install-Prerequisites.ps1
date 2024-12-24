@@ -27,20 +27,50 @@ function Install-Prerequisites {
     
     # Check for osquery
     try {
-        $null = Get-Command osqueryi -ErrorAction Stop
-        Write-Verbose "OSQuery is installed"
+        $osqueryCmd = Get-Command osqueryi -ErrorAction Stop
+        if ($osqueryCmd) {
+            $currentVersion = & osqueryi --version
+            Write-Verbose "Found OSQuery version: $currentVersion"
+            
+            # Get latest version from osquery.io
+            $latestVersion = (Invoke-RestMethod -Uri "https://api.github.com/repos/osquery/osquery/releases/latest").tag_name
+            $latestVersion = $latestVersion.TrimStart('v')
+            Write-Verbose "Latest OSQuery version available: $latestVersion"
+            
+            if ([version]$currentVersion -ge [version]$latestVersion) {
+                Write-Verbose "OSQuery is up to date"
+                return
+            }
+            Write-Verbose "OSQuery needs updating from $currentVersion to $latestVersion"
+        }
     }
     catch {
-        Write-Warning "OSQuery not found. Installing..."
+        Write-Warning "OSQuery not found or version check failed. Installing..."
         try {
             # Verify admin rights first
             if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
                 throw "Administrator rights required for osquery installation"
             }
 
+            # Get latest version and download URL
+            $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/osquery/osquery/releases/latest"
+            $latestVersion = $latestRelease.tag_name.TrimStart('v')
+            $osqueryUrl = "https://pkg.osquery.io/windows/osquery-$latestVersion.msi"
+            Write-Verbose "Installing latest version: $latestVersion"
+
+            # Check for existing installation and uninstall if needed
+            $existingOsquery = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*osquery*" }
+            if ($existingOsquery) {
+                Write-Verbose "Found existing osquery installation. Attempting to uninstall..."
+                $uninstallResult = $existingOsquery.Uninstall()
+                if ($uninstallResult.ReturnValue -ne 0) {
+                    throw "Failed to uninstall existing osquery version"
+                }
+                Write-Verbose "Successfully uninstalled existing osquery"
+            }
+
             Write-Verbose "Installing osquery via direct MSI download..."
             $osqueryMsi = Join-Path $env:TEMP "osquery.msi"
-            $osqueryUrl = "https://pkg.osquery.io/windows/osquery-5.9.1.msi"
             
             Write-Verbose "Downloading osquery MSI..."
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
