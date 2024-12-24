@@ -16,15 +16,14 @@
     
     # Functions to make available to users
     FunctionsToExport = @(
-        'Test-AppUpdates',     # Check for available updates
-        'Update-Apps',         # Perform application updates
-        'Get-SupportedApps'    # List supported applications
+        'Test-AppUpdates',
+        'Update-Apps',
+        'Get-SupportedApps'
     )
     
     # Additional metadata for PowerShell Gallery
     PrivateData = @{
         PSData = @{
-            # Search keywords for the module
             Tags = @(
                 'Windows',
                 'Updates',
@@ -32,11 +31,7 @@
                 'Chocolatey',
                 'OSQuery'
             )
-            
-            # Source code location
             ProjectUri = 'https://github.com/jeremyroe/PSAppUpdates'
-            
-            # License information
             LicenseUri = 'https://github.com/jeremyroe/PSAppUpdates/blob/main/LICENSE'
         }
     }
