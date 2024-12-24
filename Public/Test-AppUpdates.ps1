@@ -18,7 +18,7 @@ function Test-AppUpdates {
         Write-Verbose "TESTING MODE: No changes will be made to applications"
         
         # Install prerequisites if needed (this is required for testing)
-        $prereqMessage = "Installing required prerequisites (winget and osquery)"
+        $prereqMessage = "Installing required prerequisites (Chocolatey and osquery)"
         if ($Silent -or $PSCmdlet.ShouldContinue($prereqMessage, "Install Prerequisites")) {
             Write-AppLog "Checking prerequisites..." -LogPath $LogPath
             Install-Prerequisites
@@ -43,17 +43,17 @@ function Test-AppUpdates {
             }
             
             # Check current state
-            Write-Verbose "  - Checking $($config.displayName) (ID: $($config.wingetId))"
+            Write-Verbose "  - Checking $($config.displayName) (ID: $($config.packageId))"
             
-            # Check if app is installed
-            $appInfo = winget list --id $config.wingetId --accept-source-agreements | Select-String $config.wingetId
+            # Check if app is installed using Chocolatey
+            $appInfo = choco list $config.packageId --local-only -r
             if (-not $appInfo) {
                 Write-Verbose "  - $($config.displayName) is not installed - skipping"
-                continue  # Skip this app since we only update existing installations
+                continue
             }
 
-            # Check if update is available without triggering it
-            Write-Verbose "  - Checking $($config.displayName) for updates..."
+            # Check for updates
+            Write-Verbose "  - Checking for updates..."
             $outdated = choco outdated $config.packageId -r
             $updateAvailable = $outdated -match $config.packageId
             $action = if ($updateAvailable) { 
