@@ -12,11 +12,20 @@ function Install-Prerequisites {
     catch {
         Write-Warning "Chocolatey not found. Installing..."
         try {
+            # Install Chocolatey (avoid variable conflicts)
             Set-ExecutionPolicy Bypass -Scope Process -Force
             [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+            
+            # Use direct invocation instead of Invoke-Expression
+            $installScript = (New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')
+            & ([scriptblock]::Create($installScript))
+            
+            # Verify installation
             $null = Get-Command choco -ErrorAction Stop
             Write-Verbose "Chocolatey installed successfully"
+            
+            # Refresh environment
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         }
         catch {
             throw "Failed to install Chocolatey: $_"
