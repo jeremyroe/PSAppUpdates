@@ -17,7 +17,7 @@ function Test-AppUpdates {
     try {
         Write-Verbose "TESTING MODE: No changes will be made to applications"
         
-        # Install prerequisites if needed (this is required for testing)
+        # Install prerequisites if needed
         $prereqMessage = "Installing required prerequisites (Chocolatey and osquery)"
         if ($Silent -or $PSCmdlet.ShouldContinue($prereqMessage, "Install Prerequisites")) {
             Write-AppLog "Checking prerequisites..." -LogPath $LogPath
