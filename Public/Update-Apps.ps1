@@ -15,13 +15,41 @@ function Update-Apps {
     )
     
     try {
-        # Get test results first
-        $testResults = Test-AppUpdates -Applications $Applications -All:$All -Silent
+        # Check prerequisites directly
+        Write-Verbose "Checking prerequisites..."
+        Install-Prerequisites
         
-        # Filter for only apps that need updates
-        $updatesNeeded = $testResults | Where-Object { $_.UpdateAvailable }
+        # Get applications to check
+        if ($All) {
+            $Applications = (Get-AppConfig).PSObject.Properties.Name
+        }
         
-        if (-not $updatesNeeded -or $updatesNeeded.Count -eq 0) {
+        $updatesNeeded = @()
+        foreach ($app in $Applications) {
+            $config = Get-AppConfig -Application $app
+            if (-not $config) {
+                Write-Warning "Application '$app' not supported"
+                continue
+            }
+            
+            # Check if installed and needs update
+            $installed = choco list $config.packageId --local-only -r
+            if (-not $installed) {
+                Write-Verbose "$($config.displayName) is not installed - skipping"
+                continue
+            }
+            
+            $outdated = choco outdated $config.packageId -r
+            if ($outdated -match $config.packageId) {
+                $updatesNeeded += @{
+                    Name = $app
+                    DisplayName = $config.displayName
+                    PackageId = $config.packageId
+                }
+            }
+        }
+        
+        if (-not $updatesNeeded) {
             Write-Verbose "No updates required"
             return
         }
@@ -32,24 +60,12 @@ function Update-Apps {
             Write-Verbose "  $($app.DisplayName): Update available"
         }
 
-        # Confirm all updates
-        if (-not $Force) {
-            $updateList = $updatesNeeded | ForEach-Object { $_.DisplayName }
-            $message = "The following applications will be updated:`n" + ($updateList -join "`n")
-            if (-not $PSCmdlet.ShouldProcess($message, "Update Applications")) {
-                Write-Verbose "Update cancelled by user"
-                return
-            }
-        }
-
         # Perform updates
         foreach ($app in $updatesNeeded) {
-            $config = Get-AppConfig -Application $app.Name
             if ($PSCmdlet.ShouldProcess($app.DisplayName, "Update application")) {
                 Write-Verbose "Updating $($app.DisplayName)..."
                 try {
-                    # Use Chocolatey to update
-                    $result = choco upgrade $config.packageId -y
+                    $result = choco upgrade $app.PackageId -y
                     Write-Verbose $result
                 }
                 catch {
