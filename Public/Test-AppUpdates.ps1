@@ -61,14 +61,25 @@ function Test-AppUpdates {
                 "No update required"
             }
 
-            $processesRunning = $config.processNames | Where-Object { Get-Process -Name $_ -ErrorAction SilentlyContinue }
+            # Check for running processes more thoroughly
+            $processesRunning = @()
+            foreach ($processName in $config.processNames) {
+                # Strip .exe if present for consistency
+                $baseName = $processName -replace '\.exe$', ''
+                $running = Get-Process -Name $baseName -ErrorAction SilentlyContinue
+                if ($running) {
+                    Write-Verbose "  - Found running process: $baseName"
+                    $processesRunning += $running
+                }
+            }
             
             $results += [PSCustomObject]@{
                 Name = $app
                 DisplayName = $config.displayName
                 UpdateAvailable = $updateAvailable
-                ProcessesRunning = if ($processesRunning) { $true } else { $false }
-                WouldRequireClose = if ($processesRunning) { $true } else { $false }
+                ProcessesRunning = $processesRunning.Count -gt 0
+                RunningProcesses = $processesRunning | Select-Object -ExpandProperty ProcessName -Unique
+                WouldRequireClose = $processesRunning.Count -gt 0
                 Action = $action
             }
         }

@@ -13,7 +13,7 @@
         "detection": {
             "programName": "Google Chrome"
         },
-        "processNames": ["chrome.exe"]
+        "processNames": ["chrome", "chrome.exe"]
     },
     "Firefox": {
         "displayName": "Mozilla Firefox",
