@@ -53,8 +53,9 @@ function Test-AppUpdates {
             }
 
             # Check if update is available without triggering it
-            $updateCheck = winget list --upgrade --id $config.wingetId | Select-String $config.wingetId
-            $updateAvailable = ($null -ne $updateCheck)
+            Write-Verbose "  - Checking $($config.displayName) for updates..."
+            $outdated = choco outdated $config.packageId -r
+            $updateAvailable = $outdated -match $config.packageId
             $action = if ($updateAvailable) { 
                 "Would update to latest version"
             } else {
