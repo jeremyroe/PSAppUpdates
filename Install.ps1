@@ -21,7 +21,43 @@ try {
     Write-Verbose "Creating module directory"
     New-Item -Path $modulePath -ItemType Directory -Force | Out-Null
     
-    # Download and extract
+    # Create module files directly
+    Write-Verbose "Creating module files..."
+    
+    # Create PSAppUpdates.psm1
+    @'
+# Get public and private function definition files
+$Public = @(Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -ErrorAction SilentlyContinue)
+$Private = @(Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -ErrorAction SilentlyContinue)
+
+# Dot source the files
+foreach ($import in @($Public + $Private)) {
+    try {
+        . $import.FullName
+    }
+    catch {
+        Write-Error "Failed to import function $($import.FullName): $_"
+    }
+}
+
+# Export public functions
+Export-ModuleMember -Function $Public.BaseName
+'@ | Set-Content "$modulePath\PSAppUpdates.psm1"
+    
+    # Create PSAppUpdates.psd1
+    @'
+@{
+    RootModule = 'PSAppUpdates.psm1'
+    ModuleVersion = '0.1.0'
+    GUID = '03d7882e-f245-4de8-9a13-65c67b4746e5'
+    Author = 'Jeremy Roe'
+    Description = 'Windows Application Update Management Module using Chocolatey and osquery'
+    PowerShellVersion = '5.1'
+    FunctionsToExport = @('Test-AppUpdates', 'Update-Apps', 'Get-SupportedApps')
+}
+'@ | Set-Content "$modulePath\PSAppUpdates.psd1"
+    
+    # Download and extract function files
     $url = "https://github.com/jeremyroe/PSAppUpdates/archive/refs/heads/$Branch.zip"
     $output = Join-Path $env:TEMP "PSAppUpdates.zip"
     
@@ -32,23 +68,19 @@ try {
     Write-Verbose "Extracting module files..."
     Expand-Archive -Path $output -DestinationPath $env:TEMP -Force
     
-    # Copy files from the correct subdirectory
     $extractPath = "$env:TEMP\PSAppUpdates-$Branch"
-    Write-Verbose "Copying files from $extractPath to $modulePath"
     
-    # Copy module files
-    Write-Verbose "Copying root module files"
-    Copy-Item "$extractPath\*.ps*" $modulePath -Force
-    Get-ChildItem $modulePath -File | ForEach-Object { Write-Verbose "  Copied $($_.Name)" }
-    
-    # Create subdirectories and copy files
+    # Create directories and copy files
     foreach ($dir in @('Public', 'Private', 'Config')) {
+        Write-Verbose "Processing $dir directory"
+        $targetDir = "$modulePath\$dir"
+        New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
+        
         if (Test-Path "$extractPath\$dir") {
-            Write-Verbose "Processing $dir directory"
-            $targetDir = "$modulePath\$dir"
-            New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
             Copy-Item "$extractPath\$dir\*" "$targetDir\" -Recurse -Force
-            Get-ChildItem $targetDir -File | ForEach-Object { Write-Verbose "  Copied $($_.Name)" }
+            Get-ChildItem $targetDir -File | ForEach-Object { 
+                Write-Verbose "  Copied $($_.Name)"
+            }
         }
     }
     
@@ -57,11 +89,15 @@ try {
     Remove-Item $output -Force -ErrorAction SilentlyContinue
     Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
     
+    # Verify structure
+    Write-Verbose "Module structure:"
+    Get-ChildItem $modulePath -Recurse | ForEach-Object {
+        $indent = "  " * ($_.FullName.Split('\').Count - $modulePath.Split('\').Count)
+        Write-Verbose "$indent$($_.Name)"
+    }
+    
     # Import module
     Write-Verbose "Loading module..."
-    Write-Verbose "Module files present:"
-    Get-ChildItem $modulePath -Recurse | ForEach-Object { Write-Verbose "  $($_.FullName)" }
-    
     Import-Module PSAppUpdates -Force -Verbose -ErrorAction Stop
     
     Write-Host "PSAppUpdates module installed successfully!" -ForegroundColor Green
