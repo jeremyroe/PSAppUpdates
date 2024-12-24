@@ -45,14 +45,26 @@ function Update-Apps {
             # Check for updates
             $outdated = choco outdated $config.packageId -r
             if ($outdated -match $config.packageId) {
-                $availableVersion = ($outdated -split '\|')[3]
-                Write-Verbose "$($config.displayName) has update available: $currentVersion -> $availableVersion"
-                $updatesNeeded += @{
-                    Name = $app
-                    DisplayName = $config.displayName
-                    PackageId = $config.packageId
-                    CurrentVersion = $currentVersion
-                    AvailableVersion = $availableVersion
+                # Parse the outdated string correctly
+                $outdatedParts = $outdated -split '\|'
+                if ($outdatedParts.Count -ge 4) {
+                    $availableVersion = $outdatedParts[3].Trim()
+                    if ([string]::IsNullOrEmpty($availableVersion) -or $availableVersion -eq 'false') {
+                        Write-Verbose "$($config.displayName) has no valid update version available"
+                        continue
+                    }
+                    Write-Verbose "$($config.displayName) has update available: $currentVersion -> $availableVersion"
+                    $updatesNeeded += @{
+                        Name = $app
+                        DisplayName = $config.displayName
+                        PackageId = $config.packageId
+                        CurrentVersion = $currentVersion
+                        AvailableVersion = $availableVersion
+                    }
+                }
+                else {
+                    Write-Warning "Could not parse update information for $($config.displayName)"
+                    continue
                 }
             }
             else {

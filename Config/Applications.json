@@ -3,5 +3,10 @@
         "displayName": "Google Chrome",
         "packageId": "googlechrome",
         "processNames": ["chrome", "chrome.exe"]
+    },
+    "OSQuery": {
+        "displayName": "OSQuery",
+        "packageId": "osquery",
+        "processNames": ["osqueryd", "osqueryd.exe"]
     }
 } 
