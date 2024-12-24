@@ -82,17 +82,29 @@ Export-ModuleMember -Function $Public.BaseName
         Write-Verbose "Created $targetDir"
         
         if (Test-Path "$extractPath\$dir") {
-            Copy-Item "$extractPath\$dir\*" "$targetDir\" -Recurse -Force
-            Get-ChildItem $targetDir -File | ForEach-Object { 
-                Write-Verbose "  Copied $($_.Name)"
+            # Copy files to the correct subdirectories
+            $sourceFiles = Get-ChildItem "$extractPath\$dir\*" -File
+            foreach ($file in $sourceFiles) {
+                $targetFile = Join-Path $targetDir $file.Name
+                Copy-Item $file.FullName $targetFile -Force
+                Write-Verbose "  Copied $($file.Name) to $targetDir"
             }
         }
     }
     
     # Verify structure before cleanup
     Write-Verbose "`nVerifying module structure:"
-    Get-ChildItem $modulePath -Recurse | ForEach-Object {
-        Write-Verbose "  $($_.FullName)"
+    Write-Verbose "Root module files:"
+    Get-ChildItem $modulePath -File | ForEach-Object {
+        Write-Verbose "  $($_.Name)"
+    }
+    
+    Write-Verbose "`nSubdirectories:"
+    Get-ChildItem $modulePath -Directory | ForEach-Object {
+        Write-Verbose "  $($_.Name):"
+        Get-ChildItem $_.FullName -File | ForEach-Object {
+            Write-Verbose "    $($_.Name)"
+        }
     }
     
     # Test manifest before import
