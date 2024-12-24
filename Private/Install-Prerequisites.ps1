@@ -88,20 +88,39 @@ function Install-Prerequisites {
                     Write-Verbose "MSI Log: $logContent"
                     throw "MSI installation failed with exit code $($process.ExitCode). Check log: $logFile"
                 }
+
+                # Find osquery installation path
+                Write-Verbose "Locating osquery installation..."
+                $osqueryPath = "${env:ProgramFiles}\osquery"
+                if (Test-Path "${env:ProgramFiles(x86)}\osquery") {
+                    $osqueryPath = "${env:ProgramFiles(x86)}\osquery"
+                }
+
+                # Add to PATH if not already present
+                $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+                if ($currentPath -notlike "*$osqueryPath*") {
+                    Write-Verbose "Adding osquery to system PATH..."
+                    $newPath = "$currentPath;$osqueryPath"
+                    [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
+                    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+                }
+
+                # Verify installation using full path
+                Write-Verbose "Verifying osquery installation..."
+                $osqueryExe = Join-Path $osqueryPath "osqueryi.exe"
+                if (-not (Test-Path $osqueryExe)) {
+                    throw "Osquery executable not found at expected location: $osqueryExe"
+                }
+                
+                # Test the installation
+                $version = & $osqueryExe --version
+                Write-Verbose "Osquery $version installed successfully at $osqueryPath"
             }
             finally {
                 if (Test-Path $osqueryMsi) {
                     Remove-Item $osqueryMsi -Force
                 }
             }
-            
-            Write-Verbose "Refreshing environment path..."
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-            
-            # Verify installation
-            Write-Verbose "Verifying osquery installation..."
-            $null = Get-Command osqueryi -ErrorAction Stop
-            Write-Verbose "OSQuery installed successfully"
         }
         catch {
             throw "Failed to install osquery: $_"
