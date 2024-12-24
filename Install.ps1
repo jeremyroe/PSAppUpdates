@@ -4,11 +4,16 @@ param(
     [string]$Branch = "main"
 )
 
+# Ensure we're running as admin
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw "This script requires administrative rights. Please run PowerShell as Administrator."
+}
+
 try {
     Write-Verbose "Installing PSAppUpdates module..."
     
-    # Create user modules directory if it doesn't exist
-    $modulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\PSAppUpdates"
+    # Install to system-wide location instead of user profile
+    $modulePath = "$env:ProgramFiles\WindowsPowerShell\Modules\PSAppUpdates"
     if (-not (Test-Path $modulePath)) {
         New-Item -Path $modulePath -ItemType Directory -Force | Out-Null
     }

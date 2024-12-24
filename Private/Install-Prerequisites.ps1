@@ -14,11 +14,25 @@ function Install-Prerequisites {
         try {
             $progressPreference = 'SilentlyContinue'
             Write-Verbose "Downloading Microsoft.DesktopAppInstaller..."
+            
+            # Use different method for system account
+            if ([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
+                Write-Warning "Running as SYSTEM account. Please install winget manually or run as regular admin."
+                throw "Winget installation requires interactive user context"
+            }
+
             $URL = "https://aka.ms/getwinget"
             $outputFile = Join-Path $env:TEMP "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
             Invoke-WebRequest -Uri $URL -OutFile $outputFile
+            
+            # Add required dependencies first
+            $vcLibsURI = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
+            $vcLibsFile = Join-Path $env:TEMP "Microsoft.VCLibs.x64.14.00.Desktop.appx"
+            Invoke-WebRequest -Uri $vcLibsURI -OutFile $vcLibsFile
+            Add-AppxPackage -Path $vcLibsFile
+            
             Add-AppxPackage -Path $outputFile
-            Remove-Item $outputFile
+            Remove-Item $outputFile, $vcLibsFile -Force
         }
         catch {
             throw "Failed to install winget: $_"
