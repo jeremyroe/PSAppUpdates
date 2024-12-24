@@ -12,4 +12,6 @@ The module will automatically install:
 - Chocolatey package manager
 - OSQuery (latest version)
 
-## Installation 
+## Quick Start
+
+### Installation 
