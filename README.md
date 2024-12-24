@@ -1,7 +1,15 @@
 # PSAppUpdates
 
-PowerShell module for managing Windows application updates using winget and osquery.
+A PowerShell module for managing Windows application updates using Chocolatey and OSQuery.
 
-## Installation
+## Prerequisites
 
-### Option 1: Direct Installation Script 
+- Windows PowerShell 5.1 or later
+- Administrator rights
+- Internet connectivity
+
+The module will automatically install:
+- Chocolatey package manager
+- OSQuery (latest version)
+
+## Installation 
