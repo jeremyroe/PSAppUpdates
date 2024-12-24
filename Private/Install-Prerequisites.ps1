@@ -33,28 +33,31 @@ function Install-Prerequisites {
     catch {
         Write-Warning "OSQuery not found. Installing..."
         try {
-            # Use winget to install osquery with more specific parameters
-            Write-Verbose "Attempting to install osquery via winget..."
-            $result = winget install --exact --id "osquery.osquery" --accept-source-agreements --accept-package-agreements --silent
+            Write-Verbose "Installing osquery via direct MSI download..."
+            $osqueryMsi = Join-Path $env:TEMP "osquery.msi"
+            $osqueryUrl = "https://pkg.osquery.io/windows/osquery-5.9.1.msi"
             
-            if ($LASTEXITCODE -ne 0) {
-                # Try alternative installation if winget fails
-                Write-Verbose "Winget installation failed, attempting alternative installation..."
-                $osqueryMsi = Join-Path $env:TEMP "osquery.msi"
-                $osqueryUrl = "https://pkg.osquery.io/windows/osquery-5.9.1.msi"
-                
-                Invoke-WebRequest -Uri $osqueryUrl -OutFile $osqueryMsi
-                $installArgs = "/i `"$osqueryMsi`" /qn"
-                Start-Process "msiexec.exe" -ArgumentList $installArgs -Wait
-                
-                Remove-Item $osqueryMsi -Force
-                
-                # Verify installation
-                $null = Get-Command osqueryi -ErrorAction Stop
+            Write-Verbose "Downloading osquery MSI..."
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            Invoke-WebRequest -Uri $osqueryUrl -OutFile $osqueryMsi
+            
+            Write-Verbose "Installing osquery..."
+            $installArgs = "/i `"$osqueryMsi`" /qn"
+            $process = Start-Process "msiexec.exe" -ArgumentList $installArgs -Wait -PassThru
+            
+            if ($process.ExitCode -ne 0) {
+                throw "MSI installation failed with exit code $($process.ExitCode)"
             }
             
-            # Refresh environment path
+            Remove-Item $osqueryMsi -Force
+            
+            Write-Verbose "Refreshing environment path..."
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            
+            # Verify installation
+            Write-Verbose "Verifying osquery installation..."
+            $null = Get-Command osqueryi -ErrorAction Stop
+            Write-Verbose "OSQuery installed successfully"
         }
         catch {
             throw "Failed to install osquery: $_"
