@@ -1,34 +1,10 @@
 {
-    "AdobeReader": {
-        "displayName": "Adobe Acrobat Reader DC",
-        "wingetId": "Adobe.Acrobat.Reader.64-bit",
-        "detection": {
-            "programName": "Adobe Acrobat Reader DC"
-        },
-        "processNames": ["AcroRd32.exe", "Acrobat.exe"]
-    },
     "Chrome": {
         "displayName": "Google Chrome",
-        "wingetId": "Google.Chrome",
+        "packageId": "googlechrome",
         "detection": {
             "programName": "Google Chrome"
         },
         "processNames": ["chrome", "chrome.exe"]
-    },
-    "Firefox": {
-        "displayName": "Mozilla Firefox",
-        "wingetId": "Mozilla.Firefox",
-        "detection": {
-            "programName": "Mozilla Firefox"
-        },
-        "processNames": ["firefox.exe"]
-    },
-    "FirefoxESR": {
-        "displayName": "Mozilla Firefox ESR",
-        "wingetId": "Mozilla.Firefox.ESR",
-        "detection": {
-            "programName": "Mozilla Firefox ESR"
-        },
-        "processNames": ["firefox.exe"]
     }
 } 
