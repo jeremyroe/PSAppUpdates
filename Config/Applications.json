@@ -1,22 +1,7 @@
 {
-    // Google Chrome configuration
     "Chrome": {
-        // Display name for user interface and logging
         "displayName": "Google Chrome",
-        
-        // Chocolatey package identifier
         "packageId": "googlechrome",
-        
-        // Application detection settings
-        "detection": {
-            // Program name as it appears in Add/Remove Programs
-            "programName": "Google Chrome"
-        },
-        
-        // Process names to check before updating
-        "processNames": [
-            "chrome",
-            "chrome.exe"
-        ]
+        "processNames": ["chrome", "chrome.exe"]
     }
 } 
