@@ -11,28 +11,16 @@
     # Minimum PowerShell version required
     PowerShellVersion = '5.1'
     
-    # Module dependencies
-    RequiredModules = @()
-    
-    # Functions to make available to users
+    # Functions to export
     FunctionsToExport = @(
         'Test-AppUpdates',
         'Update-Apps',
         'Get-SupportedApps'
     )
     
-    # Additional metadata for PowerShell Gallery
-    PrivateData = @{
-        PSData = @{
-            Tags = @(
-                'Windows',
-                'Updates',
-                'Applications',
-                'Chocolatey',
-                'OSQuery'
-            )
-            ProjectUri = 'https://github.com/jeremyroe/PSAppUpdates'
-            LicenseUri = 'https://github.com/jeremyroe/PSAppUpdates/blob/main/LICENSE'
-        }
-    }
+    # No nested modules
+    NestedModules = @()
+    
+    # No module dependencies
+    RequiredModules = @()
 } 
