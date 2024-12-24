@@ -45,20 +45,20 @@ function Test-AppUpdates {
             # Check current state
             Write-Verbose "  - Checking $($config.displayName) (ID: $($config.wingetId))"
             
-            # Use list instead of upgrade to avoid triggering installation
+            # Check if app is installed
             $appInfo = winget list --id $config.wingetId --accept-source-agreements | Select-String $config.wingetId
             if (-not $appInfo) {
-                $action = "Would install (not currently installed)"
-                $updateAvailable = $true
+                Write-Verbose "  - $($config.displayName) is not installed - skipping"
+                continue  # Skip this app since we only update existing installations
+            }
+
+            # Check if update is available without triggering it
+            $updateCheck = winget list --upgrade --id $config.wingetId | Select-String $config.wingetId
+            $updateAvailable = ($null -ne $updateCheck)
+            $action = if ($updateAvailable) { 
+                "Would update to latest version"
             } else {
-                # Check if update is available without triggering it
-                $updateCheck = winget list --upgrade --id $config.wingetId | Select-String $config.wingetId
-                $updateAvailable = ($null -ne $updateCheck)
-                $action = if ($updateAvailable) { 
-                    "Would update to latest version"
-                } else {
-                    "No update required"
-                }
+                "No update required"
             }
 
             $processesRunning = $config.processNames | Where-Object { Get-Process -Name $_ -ErrorAction SilentlyContinue }
