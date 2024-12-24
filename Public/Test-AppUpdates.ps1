@@ -44,20 +44,32 @@ function Test-AppUpdates {
             
             # Check current state
             Write-Verbose "  - Checking $($config.displayName) (ID: $($config.wingetId))"
-            $updateAvailable = winget upgrade --id $config.wingetId | Select-String "No applicable upgrade"
+            
+            # Use list instead of upgrade to avoid triggering installation
+            $appInfo = winget list --id $config.wingetId --accept-source-agreements | Select-String $config.wingetId
+            if (-not $appInfo) {
+                $action = "Would install (not currently installed)"
+                $updateAvailable = $true
+            } else {
+                # Check if update is available without triggering it
+                $updateCheck = winget list --upgrade --id $config.wingetId | Select-String $config.wingetId
+                $updateAvailable = ($null -ne $updateCheck)
+                $action = if ($updateAvailable) { 
+                    "Would update to latest version"
+                } else {
+                    "No update required"
+                }
+            }
+
             $processesRunning = $config.processNames | Where-Object { Get-Process -Name $_ -ErrorAction SilentlyContinue }
             
             $results += [PSCustomObject]@{
                 Name = $app
                 DisplayName = $config.displayName
-                UpdateAvailable = ($null -eq $updateAvailable)
+                UpdateAvailable = $updateAvailable
                 ProcessesRunning = if ($processesRunning) { $true } else { $false }
                 WouldRequireClose = if ($processesRunning) { $true } else { $false }
-                Action = if ($null -eq $updateAvailable) { 
-                    "Would update to latest version"
-                } else {
-                    "No update required"
-                }
+                Action = $action
             }
         }
         
