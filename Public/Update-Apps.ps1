@@ -5,54 +5,57 @@ function Update-Apps {
         [string[]]$Applications,
         
         [Parameter()]
-        [string]$LogPath,
-        
-        [Parameter()]
-        [int]$MaxRetries = 3,
-        
-        [Parameter()]
-        [switch]$Force,
-        
-        [Parameter()]
-        [switch]$ForceClose,
-        
-        [Parameter()]
         [switch]$All,
 
         [Parameter()]
-        [switch]$Silent
+        [string]$LogPath,
+
+        [Parameter()]
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$NoRestart
     )
-
+    
     try {
-        # Check admin rights first
-        if (-not (Test-AdminRights)) {
-            throw "This function requires administrative rights"
+        # Get test results first
+        $testResults = Test-AppUpdates -Applications $Applications -All:$All -Silent
+        
+        # Filter for only apps that actually need updates
+        $updatesNeeded = $testResults | Where-Object { 
+            $_.UpdateAvailable -and $_.Action -eq "Would update to latest version" 
+        }
+        
+        if (-not $updatesNeeded -or $updatesNeeded.Count -eq 0) {
+            Write-Verbose "No updates required for any applications"
+            return
         }
 
-        # Check and install prerequisites
-        $prereqMessage = "Installing required prerequisites (winget and osquery)"
-        if ($Silent -or $PSCmdlet.ShouldProcess($prereqMessage, "Install Prerequisites")) {
-            Write-AppLog "Checking prerequisites..." -LogPath $LogPath
-            Install-Prerequisites
-        }
-        else {
-            throw "Prerequisites check cancelled by user"
-        }
-
-        # If -All is specified, get all supported applications
-        if ($All) {
-            $Applications = (Get-AppConfig).PSObject.Properties.Name
-        }
-
-        foreach ($app in $Applications) {
-            $config = Get-AppConfig -Application $app
-            if (-not $config) {
-                Write-Warning "Application '$app' is not supported"
-                continue
+        # Show what we're going to do
+        Write-Verbose "`nUpdate Summary:"
+        Write-Verbose "Found $($updatesNeeded.Count) application(s) requiring updates:"
+        foreach ($app in $updatesNeeded) {
+            Write-Verbose "  $($app.DisplayName): Update available"
+            if ($app.ProcessesRunning) {
+                Write-Verbose "    Note: Application is currently running"
             }
+        }
 
-            if ($PSCmdlet.ShouldProcess($config.displayName, "Update application")) {
-                Update-AppGeneric -Config $config -Force:$Force -ForceClose:$ForceClose -MaxRetries $MaxRetries -LogPath $LogPath
+        # Confirm all updates
+        if (-not $Force) {
+            $updateList = $updatesNeeded | ForEach-Object { $_.DisplayName }
+            $message = "The following applications will be updated:`n" + ($updateList -join "`n")
+            if (-not $PSCmdlet.ShouldProcess($message, "Update Applications")) {
+                Write-Verbose "Update cancelled by user"
+                return
+            }
+        }
+
+        # Perform updates
+        foreach ($app in $updatesNeeded) {
+            if ($PSCmdlet.ShouldProcess($app.DisplayName, "Update application")) {
+                Write-Verbose "Updating $($app.DisplayName)..."
+                # Update logic here
             }
         }
     }
