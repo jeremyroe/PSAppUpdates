@@ -7,6 +7,6 @@
     "OSQuery": {
         "displayName": "OSQuery",
         "packageId": "osquery",
-        "processNames": ["osqueryd", "osqueryd.exe"]
+        "processNames": ["osqueryi", "osqueryi.exe"]
     }
 } 
