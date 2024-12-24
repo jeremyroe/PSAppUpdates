@@ -10,32 +10,60 @@ function Install-Prerequisites {
         Write-Verbose "Winget is installed"
     }
     catch {
-        Write-Warning "Winget not found. Installing..."
+        Write-Warning "Winget not found. Checking alternative methods..."
         try {
-            $progressPreference = 'SilentlyContinue'
-            Write-Verbose "Downloading Microsoft.DesktopAppInstaller..."
+            # First try finding winget in standard locations
+            $wingetPaths = @(
+                "${env:ProgramFiles}\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe\winget.exe",
+                "${env:LocalAppData}\Microsoft\WindowsApps\winget.exe"
+            )
             
-            # Use different method for system account
-            if ([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
-                Write-Warning "Running as SYSTEM account. Please install winget manually or run as regular admin."
-                throw "Winget installation requires interactive user context"
+            $wingetExe = Get-ChildItem -Path $wingetPaths[0] -ErrorAction SilentlyContinue | 
+                Sort-Object LastWriteTime -Descending | 
+                Select-Object -First 1 -ExpandProperty FullName
+            
+            if ($wingetExe) {
+                # Add to PATH
+                $wingetDir = Split-Path $wingetExe -Parent
+                $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+                if ($currentPath -notlike "*$wingetDir*") {
+                    Write-Verbose "Adding winget directory to system PATH..."
+                    $newPath = "$currentPath;$wingetDir"
+                    [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
+                    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine")
+                }
+                Write-Verbose "Found existing winget installation"
+                return
             }
 
-            $URL = "https://aka.ms/getwinget"
-            $outputFile = Join-Path $env:TEMP "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-            Invoke-WebRequest -Uri $URL -OutFile $outputFile
-            
-            # Add required dependencies first
-            $vcLibsURI = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
-            $vcLibsFile = Join-Path $env:TEMP "Microsoft.VCLibs.x64.14.00.Desktop.appx"
-            Invoke-WebRequest -Uri $vcLibsURI -OutFile $vcLibsFile
-            Add-AppxPackage -Path $vcLibsFile
-            
-            Add-AppxPackage -Path $outputFile
-            Remove-Item $outputFile, $vcLibsFile -Force
+            # If running as system, we need a different approach
+            if ([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
+                Write-Warning "Running as SYSTEM account. Attempting to use pre-installed winget..."
+                
+                # Try to find any user's winget installation
+                $userProfiles = Get-ChildItem "C:\Users" -Directory
+                foreach ($profile in $userProfiles) {
+                    $userWinget = Join-Path $profile.FullName "AppData\Local\Microsoft\WindowsApps\winget.exe"
+                    if (Test-Path $userWinget) {
+                        Write-Verbose "Found winget in user profile: $userWinget"
+                        # Add to system PATH
+                        $wingetDir = Split-Path $userWinget -Parent
+                        $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+                        if ($currentPath -notlike "*$wingetDir*") {
+                            [Environment]::SetEnvironmentVariable("Path", "$currentPath;$wingetDir", "Machine")
+                            $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine")
+                        }
+                        return
+                    }
+                }
+                
+                throw "Unable to find winget installation. Please ensure winget is installed on the system."
+            }
+
+            # Interactive user installation code here...
         }
         catch {
-            throw "Failed to install winget: $_"
+            throw "Failed to find winget: $_"
         }
     }
     
