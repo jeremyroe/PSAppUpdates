@@ -15,6 +15,11 @@ function Test-AppUpdates {
     )
     
     try {
+        # Check admin rights first
+        if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw "This function requires administrative rights"
+        }
+
         # Check and install prerequisites
         $prereqMessage = "Installing required prerequisites (winget and osquery)"
         if ($Silent -or $PSCmdlet.ShouldContinue($prereqMessage, "Install Prerequisites")) {

@@ -33,6 +33,11 @@ function Install-Prerequisites {
     catch {
         Write-Warning "OSQuery not found. Installing..."
         try {
+            # Verify admin rights first
+            if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+                throw "Administrator rights required for osquery installation"
+            }
+
             Write-Verbose "Installing osquery via direct MSI download..."
             $osqueryMsi = Join-Path $env:TEMP "osquery.msi"
             $osqueryUrl = "https://pkg.osquery.io/windows/osquery-5.9.1.msi"
@@ -42,14 +47,23 @@ function Install-Prerequisites {
             Invoke-WebRequest -Uri $osqueryUrl -OutFile $osqueryMsi
             
             Write-Verbose "Installing osquery..."
-            $installArgs = "/i `"$osqueryMsi`" /qn"
-            $process = Start-Process "msiexec.exe" -ArgumentList $installArgs -Wait -PassThru
+            $logFile = Join-Path $env:TEMP "osquery_install.log"
+            $installArgs = "/i `"$osqueryMsi`" /qn /l*v `"$logFile`""
             
-            if ($process.ExitCode -ne 0) {
-                throw "MSI installation failed with exit code $($process.ExitCode)"
+            try {
+                $process = Start-Process "msiexec.exe" -ArgumentList $installArgs -Wait -PassThru -Verb RunAs
+                
+                if ($process.ExitCode -ne 0) {
+                    $logContent = Get-Content $logFile -ErrorAction SilentlyContinue
+                    Write-Verbose "MSI Log: $logContent"
+                    throw "MSI installation failed with exit code $($process.ExitCode). Check log: $logFile"
+                }
             }
-            
-            Remove-Item $osqueryMsi -Force
+            finally {
+                if (Test-Path $osqueryMsi) {
+                    Remove-Item $osqueryMsi -Force
+                }
+            }
             
             Write-Verbose "Refreshing environment path..."
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
