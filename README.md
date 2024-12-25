@@ -42,6 +42,7 @@ The module automatically installs and maintains:
 ## Currently Supported Apps
 
 - Google Chrome
+- Adobe Acrobat DC (Continuous track)
 
 ## Common Parameters
 
@@ -71,3 +72,4 @@ Update-Apps -All -Verbose
 - Detailed logging
 - Update verification
 - Version comparison
+- Vendor-specific update handling
