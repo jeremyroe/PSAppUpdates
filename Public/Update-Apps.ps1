@@ -48,6 +48,9 @@ function Update-Apps {
                             Write-Verbose "  Up to date (version $($versionInfo.Installed))"
                         }
                     }
+                    else {
+                        Write-Verbose "  Not installed"
+                    }
                     continue
                 }
                 
@@ -55,7 +58,7 @@ function Update-Apps {
                     # Existing Chocolatey check logic
                     $installed = choco list $config.packageId --local-only -r
                     if (-not $installed) {
-                        Write-Verbose "  $($config.displayName) is not installed"
+                        Write-Verbose "  Not installed"
                         continue
                     }
                     
