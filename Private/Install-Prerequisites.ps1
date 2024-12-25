@@ -53,12 +53,31 @@ function Install-Prerequisites {
         
         if ([version]$currentVersion -lt [version]$latestVersion) {
             Write-Verbose "OSQuery needs updating from $currentVersion to $latestVersion"
-            $result = choco upgrade osquery -y
-            if ($result -match "upgraded (\d+)/(\d+) packages") {
-                Write-Verbose "OSQuery updated successfully"
+            try {
+                $result = choco upgrade osquery -y
+                
+                # Verify the update
+                $newVersion = (& $osqueryExe --version).Replace('osqueryi.exe version ', '')
+                if ([version]$newVersion -gt [version]$currentVersion) {
+                    Write-Verbose "OSQuery updated successfully from $currentVersion to $newVersion"
+                }
+                else {
+                    Write-Warning "OSQuery update may have failed. Version is still $newVersion"
+                    # Give time for processes to release handles
+                    Start-Sleep -Seconds 2
+                    # Try one more time
+                    $result = choco upgrade osquery -y --force
+                    $finalVersion = (& $osqueryExe --version).Replace('osqueryi.exe version ', '')
+                    if ([version]$finalVersion -gt [version]$currentVersion) {
+                        Write-Verbose "OSQuery updated successfully on second attempt to $finalVersion"
+                    }
+                    else {
+                        Write-Warning "OSQuery update failed. Please update manually."
+                    }
+                }
             }
-            else {
-                Write-Warning "OSQuery update may have failed. Please check version manually."
+            catch {
+                Write-Warning "Failed to update OSQuery: $_"
             }
         }
         else {
