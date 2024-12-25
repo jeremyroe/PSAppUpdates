@@ -106,8 +106,21 @@ function Update-Apps {
             if ($PSCmdlet.ShouldProcess($app.DisplayName, "Update from $($app.CurrentVersion) to $($app.AvailableVersion)")) {
                 Write-Verbose "Updating $($app.DisplayName)..."
                 try {
-                    $result = choco upgrade $app.PackageId -y
-                    Write-Verbose $result
+                    $config = Get-AppConfig -Application $app.Name
+                    
+                    switch ($config.updateType) {
+                        'adobe' {
+                            $success = Update-AdobeAcrobat -CurrentVersion $app.CurrentVersion -TargetVersion $app.AvailableVersion
+                            if (-not $success) {
+                                Write-Warning "Failed to update $($app.DisplayName)"
+                            }
+                        }
+                        
+                        default {
+                            $result = choco upgrade $app.PackageId -y
+                            Write-Verbose $result
+                        }
+                    }
                 }
                 catch {
                     Write-Warning "Failed to update $($app.DisplayName): $($_.Exception.Message)"
