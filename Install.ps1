@@ -18,7 +18,8 @@ New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
 
 # Download and extract module files
 Write-Verbose "Downloading module files..."
-$branch = "feature/adobe-acrobat-updates"  # Specify branch here
+$branch = "feature/adobe-acrobat-updates"
+$branchPath = $branch.Replace('/', '-')  # Fix path issues
 $zipUrl = "https://github.com/jeremyroe/PSAppUpdates/archive/refs/heads/$branch.zip"
 $zipFile = Join-Path $env:TEMP "PSAppUpdates.zip"
 
@@ -27,12 +28,13 @@ Write-Verbose "Extracting files..."
 Expand-Archive -Path $zipFile -DestinationPath $env:TEMP -Force
 
 # Copy files to module directory
-Write-Verbose "Copying from: $env:TEMP\PSAppUpdates-$branch"
-Copy-Item "$env:TEMP\PSAppUpdates-$branch\*" $modulePath -Recurse -Force
+$sourcePath = Join-Path $env:TEMP "PSAppUpdates-$branchPath"
+Write-Verbose "Copying from: $sourcePath"
+Copy-Item "$sourcePath\*" $modulePath -Recurse -Force
 
 # Clean up
-Remove-Item $zipFile -Force
-Remove-Item "$env:TEMP\PSAppUpdates-$branch" -Recurse -Force
+Remove-Item $zipFile -Force -ErrorAction SilentlyContinue
+Remove-Item $sourcePath -Recurse -Force -ErrorAction SilentlyContinue
 
 # Load module
 Write-Verbose "Loading module..."
