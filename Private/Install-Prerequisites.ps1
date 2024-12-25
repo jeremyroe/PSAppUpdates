@@ -54,30 +54,30 @@ function Install-Prerequisites {
         if ([version]$currentVersion -lt [version]$latestVersion) {
             Write-Verbose "OSQuery needs updating from $currentVersion to $latestVersion"
             try {
-                $result = choco upgrade osquery -y
+                # Stop OSQuery service if running
+                Stop-Service 'osqueryd' -ErrorAction SilentlyContinue
                 
-                # Verify the update
+                # Force close any running instances
+                Get-Process -Name 'osqueryi','osqueryd' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+                
+                # Perform update
+                $result = choco upgrade osquery -y --force
+                
+                # Wait for processes to finish
+                Start-Sleep -Seconds 5
+                
+                # Get new version and verify
                 $newVersion = (& $osqueryExe --version).Replace('osqueryi.exe version ', '')
                 if ([version]$newVersion -gt [version]$currentVersion) {
                     Write-Verbose "OSQuery updated successfully from $currentVersion to $newVersion"
                 }
                 else {
-                    Write-Warning "OSQuery update may have failed. Version is still $newVersion"
-                    # Give time for processes to release handles
-                    Start-Sleep -Seconds 2
-                    # Try one more time
-                    $result = choco upgrade osquery -y --force
-                    $finalVersion = (& $osqueryExe --version).Replace('osqueryi.exe version ', '')
-                    if ([version]$finalVersion -gt [version]$currentVersion) {
-                        Write-Verbose "OSQuery updated successfully on second attempt to $finalVersion"
-                    }
-                    else {
-                        Write-Warning "OSQuery update failed. Please update manually."
-                    }
+                    throw "Update failed - version is still $newVersion"
                 }
             }
             catch {
                 Write-Warning "Failed to update OSQuery: $_"
+                throw
             }
         }
         else {
