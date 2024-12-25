@@ -5,13 +5,7 @@ function Update-Apps {
         [string[]]$Applications,
         
         [Parameter()]
-        [switch]$All,
-
-        [Parameter()]
-        [string]$LogPath,
-
-        [Parameter()]
-        [switch]$Force
+        [switch]$All
     )
     
     try {
@@ -21,6 +15,7 @@ function Update-Apps {
         # Get applications to check
         if ($All) {
             $Applications = (Get-AppConfig).PSObject.Properties.Name
+            Write-Verbose "Checking all supported applications: $($Applications -join ', ')"
         }
         
         $updatesNeeded = @()
@@ -31,29 +26,30 @@ function Update-Apps {
                 continue
             }
             
-            # Check if installed and needs update
+            Write-Verbose "Checking $($config.displayName)..."
+            
+            # Check if installed
             $installed = choco list $config.packageId --local-only -r
             if (-not $installed) {
-                Write-Verbose "$($config.displayName) is not installed - skipping"
+                Write-Verbose "  $($config.displayName) is not installed"
                 continue
             }
             
             # Get current version
             $currentVersion = ($installed -split '\|')[1]
-            Write-Verbose "$($config.displayName) current version: $currentVersion"
+            Write-Verbose "  Current version: $currentVersion"
             
-            # Regular Chocolatey version check for other apps
+            # Check for updates
             $outdated = choco outdated $config.packageId -r
             if ($outdated -match $config.packageId) {
-                # Parse the outdated string correctly
                 $outdatedParts = $outdated -split '\|'
                 if ($outdatedParts.Count -ge 4) {
                     $availableVersion = $outdatedParts[3].Trim()
                     if ([string]::IsNullOrEmpty($availableVersion) -or $availableVersion -eq 'false') {
-                        Write-Verbose "$($config.displayName) has no valid update version available"
+                        Write-Verbose "  No valid update version available"
                         continue
                     }
-                    Write-Verbose "$($config.displayName) has update available: $currentVersion -> $availableVersion"
+                    Write-Verbose "  Update available: $currentVersion -> $availableVersion"
                     $updatesNeeded += @{
                         Name = $app
                         DisplayName = $config.displayName
@@ -62,22 +58,18 @@ function Update-Apps {
                         AvailableVersion = $availableVersion
                     }
                 }
-                else {
-                    Write-Warning "Could not parse update information for $($config.displayName)"
-                    continue
-                }
             }
             else {
-                Write-Verbose "$($config.displayName) is up to date (version $currentVersion)"
+                Write-Verbose "  Up to date (version $currentVersion)"
             }
         }
         
         if (-not $updatesNeeded) {
-            Write-Verbose "No updates required"
+            Write-Verbose "No updates required for any checked applications"
             return
         }
 
-        # Show what we're going to do
+        # Show update summary
         Write-Verbose "`nUpdate Summary:"
         foreach ($app in $updatesNeeded) {
             Write-Verbose "  $($app.DisplayName): $($app.CurrentVersion) -> $($app.AvailableVersion)"
@@ -98,7 +90,7 @@ function Update-Apps {
         }
     }
     catch {
-        Write-ErrorHandler $_ "Failed in Update-Apps" -LogPath $LogPath -ThrowError
+        Write-ErrorHandler $_ "Failed in Update-Apps" -ThrowError
     }
 } 
 
