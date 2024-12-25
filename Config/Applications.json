@@ -3,5 +3,27 @@
         "displayName": "Google Chrome",
         "packageId": "googlechrome",
         "processNames": ["chrome", "chrome.exe"]
+    },
+    "Firefox": {
+        "displayName": "Mozilla Firefox",
+        "packageId": "firefox",
+        "processNames": ["firefox", "firefox.exe"]
+    },
+    "FirefoxESR": {
+        "displayName": "Mozilla Firefox ESR",
+        "packageId": "firefox-esr",
+        "processNames": ["firefox", "firefox.exe"]
+    },
+    "AdobeReader": {
+        "displayName": "Adobe Reader DC",
+        "packageId": "adobereader",
+        "processNames": ["acrord32", "acrord32.exe"]
+    },
+    "AdobeAcrobat": {
+        "displayName": "Adobe Acrobat DC",
+        "packageId": "adobeacrobat",
+        "processNames": ["acrobat", "acrobat.exe"],
+        "versionUrl": "https://www.adobe.com/devnet-docs/acrobatetk/tools/ReleaseNotesDC/continuous.html",
+        "updateType": "adobe"
     }
 } 
