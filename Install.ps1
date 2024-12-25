@@ -1,57 +1,42 @@
 [CmdletBinding()]
-param(
-    [Parameter()]
-    [string]$Branch = "main"
-)
+param()
 
-try {
-    Write-Verbose "Installing PSAppUpdates module..."
-    
-    # Install to system-wide location
-    $modulePath = "$env:ProgramFiles\WindowsPowerShell\Modules\PSAppUpdates"
-    Write-Verbose "Module path: $modulePath"
-    
-    # Clean up any existing installation
-    if (Test-Path $modulePath) {
-        Write-Verbose "Removing existing installation"
-        Remove-Item $modulePath -Recurse -Force
-    }
-    
-    # Create module directory
-    New-Item -Path $modulePath -ItemType Directory -Force | Out-Null
-    
-    # Download and extract
-    Write-Verbose "Downloading module files..."
-    $url = "https://github.com/jeremyroe/PSAppUpdates/archive/refs/heads/$Branch.zip"
-    $output = Join-Path $env:TEMP "PSAppUpdates.zip"
-    
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $url -OutFile $output
-    
-    Write-Verbose "Extracting files..."
-    Expand-Archive -Path $output -DestinationPath $env:TEMP -Force
-    
-    # Important: Copy from the correct subdirectory
-    $extractPath = "$env:TEMP\PSAppUpdates-$Branch"
-    Write-Verbose "Copying from: $extractPath"
-    
-    # Copy files from the correct location
-    Copy-Item "$extractPath\*.ps*" $modulePath
-    Copy-Item "$extractPath\Public" $modulePath -Recurse
-    Copy-Item "$extractPath\Private" $modulePath -Recurse
-    Copy-Item "$extractPath\Config" $modulePath -Recurse
-    
-    # Cleanup
-    Remove-Item $output -Force -ErrorAction SilentlyContinue
-    Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
-    
-    # Import module
-    Write-Verbose "Loading module..."
-    Import-Module PSAppUpdates -Force
-    
-    Write-Host "PSAppUpdates module installed successfully!" -ForegroundColor Green
-    Write-Host "Use 'Test-AppUpdates -All -Verbose' to test the module" -ForegroundColor Yellow
+$ErrorActionPreference = 'Stop'
+$VerbosePreference = 'Continue'
+
+Write-Verbose "Installing PSAppUpdates module..."
+
+# Set module path
+$modulePath = "$env:ProgramFiles\WindowsPowerShell\Modules\PSAppUpdates"
+Write-Verbose "Module path: $modulePath"
+
+# Create module directory
+if (Test-Path $modulePath) {
+    Remove-Item $modulePath -Recurse -Force
 }
-catch {
-    Write-Error "Failed to install PSAppUpdates: $_"
-} 
+New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+
+# Download and extract module files
+Write-Verbose "Downloading module files..."
+$branch = "feature/adobe-acrobat-updates"  # Specify branch here
+$zipUrl = "https://github.com/jeremyroe/PSAppUpdates/archive/refs/heads/$branch.zip"
+$zipFile = Join-Path $env:TEMP "PSAppUpdates.zip"
+
+Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile
+Write-Verbose "Extracting files..."
+Expand-Archive -Path $zipFile -DestinationPath $env:TEMP -Force
+
+# Copy files to module directory
+Write-Verbose "Copying from: $env:TEMP\PSAppUpdates-$branch"
+Copy-Item "$env:TEMP\PSAppUpdates-$branch\*" $modulePath -Recurse -Force
+
+# Clean up
+Remove-Item $zipFile -Force
+Remove-Item "$env:TEMP\PSAppUpdates-$branch" -Recurse -Force
+
+# Load module
+Write-Verbose "Loading module..."
+Import-Module PSAppUpdates -Force
+
+Write-Host "PSAppUpdates module installed successfully!"
+Write-Host "Use 'Test-AppUpdates -All -Verbose' to test the module" 
