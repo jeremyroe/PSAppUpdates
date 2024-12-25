@@ -28,39 +28,65 @@ function Update-Apps {
             
             Write-Verbose "Checking $($config.displayName)..."
             
-            # Check if installed
-            $installed = choco list $config.packageId --local-only -r
-            if (-not $installed) {
-                Write-Verbose "  $($config.displayName) is not installed"
-                continue
-            }
-            
-            # Get current version
-            $currentVersion = ($installed -split '\|')[1]
-            Write-Verbose "  Current version: $currentVersion"
-            
-            # Check for updates
-            $outdated = choco outdated $config.packageId -r
-            if ($outdated -match $config.packageId) {
-                $outdatedParts = $outdated -split '\|'
-                if ($outdatedParts.Count -ge 4) {
-                    $availableVersion = $outdatedParts[3].Trim()
-                    if ([string]::IsNullOrEmpty($availableVersion) -or $availableVersion -eq 'false') {
-                        Write-Verbose "  No valid update version available"
+            # Handle different update types
+            switch ($config.updateType) {
+                'adobe' {
+                    $versionInfo = Get-AdobeVersion -Application $app
+                    if ($versionInfo) {
+                        Write-Verbose "  Current version: $($versionInfo.Installed)"
+                        if ($versionInfo.NeedsUpdate) {
+                            Write-Verbose "  Update available: $($versionInfo.Installed) -> $($versionInfo.Latest)"
+                            $updatesNeeded += @{
+                                Name = $app
+                                DisplayName = $config.displayName
+                                PackageId = $config.packageId
+                                CurrentVersion = $versionInfo.Installed
+                                AvailableVersion = $versionInfo.Latest
+                            }
+                        }
+                        else {
+                            Write-Verbose "  Up to date (version $($versionInfo.Installed))"
+                        }
+                    }
+                    continue
+                }
+                
+                default {
+                    # Existing Chocolatey check logic
+                    $installed = choco list $config.packageId --local-only -r
+                    if (-not $installed) {
+                        Write-Verbose "  $($config.displayName) is not installed"
                         continue
                     }
-                    Write-Verbose "  Update available: $currentVersion -> $availableVersion"
-                    $updatesNeeded += @{
-                        Name = $app
-                        DisplayName = $config.displayName
-                        PackageId = $config.packageId
-                        CurrentVersion = $currentVersion
-                        AvailableVersion = $availableVersion
+                    
+                    # Get current version
+                    $currentVersion = ($installed -split '\|')[1]
+                    Write-Verbose "  Current version: $currentVersion"
+                    
+                    # Check for updates
+                    $outdated = choco outdated $config.packageId -r
+                    if ($outdated -match $config.packageId) {
+                        $outdatedParts = $outdated -split '\|'
+                        if ($outdatedParts.Count -ge 4) {
+                            $availableVersion = $outdatedParts[3].Trim()
+                            if ([string]::IsNullOrEmpty($availableVersion) -or $availableVersion -eq 'false') {
+                                Write-Verbose "  No valid update version available"
+                                continue
+                            }
+                            Write-Verbose "  Update available: $currentVersion -> $availableVersion"
+                            $updatesNeeded += @{
+                                Name = $app
+                                DisplayName = $config.displayName
+                                PackageId = $config.packageId
+                                CurrentVersion = $currentVersion
+                                AvailableVersion = $availableVersion
+                            }
+                        }
+                    }
+                    else {
+                        Write-Verbose "  Up to date (version $currentVersion)"
                     }
                 }
-            }
-            else {
-                Write-Verbose "  Up to date (version $currentVersion)"
             }
         }
         
