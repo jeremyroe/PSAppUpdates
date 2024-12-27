@@ -1,8 +1,8 @@
 function Get-AdobeVersion {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [string]$Application
+        [Parameter()]
+        [string]$LogPath
     )
     
     try {
@@ -11,7 +11,7 @@ function Get-AdobeVersion {
         $result = & osqueryi --json "$query" | ConvertFrom-Json
         
         if (-not $result) {
-            Write-Verbose "Adobe Acrobat DC not found"
+            Write-AppLog "Adobe Acrobat DC not found" -LogPath $LogPath
             return $null
         }
         
@@ -22,18 +22,21 @@ function Get-AdobeVersion {
             if ($response.Content -match 'Version (\d+\.\d+\.\d+)') {
                 $latestVersion = $Matches[1]
                 
-                return @{
+                $versionInfo = @{
                     Installed = $result.version
                     Latest = $latestVersion
                     NeedsUpdate = [version]$result.version -lt [version]$latestVersion
                 }
+
+                Write-AppLog "Adobe versions - Installed: $($versionInfo.Installed), Latest: $($versionInfo.Latest)" -LogPath $LogPath
+                return $versionInfo
             }
         }
         
         throw "Could not determine latest Adobe version"
     }
     catch {
-        Write-Warning "Error checking Adobe version: $_"
+        Write-ErrorHandler $_ "Error checking Adobe version" -LogPath $LogPath
         return $null
     }
 } 

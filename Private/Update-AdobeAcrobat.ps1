@@ -5,49 +5,78 @@ function Update-AdobeAcrobat {
         [string]$CurrentVersion,
         
         [Parameter(Mandatory)]
-        [string]$TargetVersion
+        [string]$TargetVersion,
+
+        [Parameter()]
+        [string]$LogPath,
+
+        [Parameter()]
+        [switch]$Force
     )
     
     try {
-        Write-Verbose "Preparing Adobe Acrobat DC update..."
+        Write-AppLog "Preparing Adobe Acrobat DC update..." -LogPath $LogPath
         
-        # Get update URL from Adobe's site
+        # Construct update URL using Adobe's pattern
         $updateUrl = "https://ardownload2.adobe.com/pub/adobe/acrobat/win/AcrobatDC/$TargetVersion/AcroRdrDCUpd$TargetVersion.msp"
-        $updateFile = Join-Path $env:TEMP "AcrobatUpdate.msp"
+        $updateFile = Join-Path $env:TEMP "AcrobatUpdate_$TargetVersion.msp"
         
-        # Download update
-        Write-Verbose "Downloading update package..."
-        Invoke-WebRequest -Uri $updateUrl -OutFile $updateFile
-        
-        if (-not (Test-Path $updateFile)) {
-            throw "Failed to download update package"
+        # Download update package
+        Write-AppLog "Downloading update package from $updateUrl" -LogPath $LogPath
+        try {
+            Invoke-WebRequest -Uri $updateUrl -OutFile $updateFile
+            if (-not (Test-Path $updateFile)) {
+                throw "Update package not found after download"
+            }
+        }
+        catch {
+            throw "Failed to download update package: $_"
         }
         
-        # Check running processes
+        # Verify running processes
         $processes = Get-Process -Name "Acrobat", "AcroRd32" -ErrorAction SilentlyContinue
-        if ($processes) {
-            Write-Warning "Adobe Acrobat processes found running. Please save work and close them."
+        if ($processes -and -not $Force) {
+            Write-AppLog "Adobe Acrobat processes found running. Use -Force to close automatically." -Level Warning -LogPath $LogPath
             return $false
         }
+        elseif ($processes -and $Force) {
+            Write-AppLog "Closing running Adobe Acrobat processes..." -LogPath $LogPath
+            $processes | Stop-Process -Force
+            Start-Sleep -Seconds 2
+        }
         
-        # Install update
+        # Install update if confirmed
         if ($PSCmdlet.ShouldProcess("Adobe Acrobat DC", "Update from $CurrentVersion to $TargetVersion")) {
-            Write-Verbose "Installing update..."
-            $result = Start-Process -FilePath "msiexec.exe" -ArgumentList "/p `"$updateFile`" /qn" -Wait -PassThru
+            Write-AppLog "Installing update..." -LogPath $LogPath
             
-            if ($result.ExitCode -eq 0) {
-                Write-Verbose "Update installed successfully"
-                return $true
-            }
-            else {
-                throw "Update installation failed with exit code: $($result.ExitCode)"
+            $arguments = @(
+                "/p `"$updateFile`""  # Patch
+                "/qn"                 # Silent
+                "/norestart"          # Prevent automatic restart
+                "/l*v `"$env:TEMP\AdobeUpdate_$TargetVersion.log`""  # Verbose logging
+            )
+            
+            $result = Start-Process -FilePath "msiexec.exe" -ArgumentList ($arguments -join ' ') -Wait -PassThru
+            
+            switch ($result.ExitCode) {
+                0 { 
+                    Write-AppLog "Update installed successfully" -LogPath $LogPath
+                    return $true 
+                }
+                3010 { 
+                    Write-AppLog "Update installed successfully - restart required" -Level Warning -LogPath $LogPath
+                    return $true 
+                }
+                default {
+                    throw "Update installation failed with exit code: $($result.ExitCode)"
+                }
             }
         }
         
         return $false
     }
     catch {
-        Write-Warning "Failed to update Adobe Acrobat: $_"
+        Write-ErrorHandler $_ "Failed to update Adobe Acrobat" -LogPath $LogPath
         return $false
     }
     finally {
