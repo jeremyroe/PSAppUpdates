@@ -2,12 +2,16 @@
     "Chrome": {
         "displayName": "Google Chrome",
         "packageId": "googlechrome",
-        "processNames": ["chrome", "chrome.exe"]
+        "wingetId": "Google.Chrome",
+        "processNames": ["chrome", "chrome.exe"],
+        "updateType": "default"
     },
     "Firefox": {
         "displayName": "Mozilla Firefox",
         "packageId": "firefox",
-        "processNames": ["firefox", "firefox.exe"]
+        "wingetId": "Mozilla.Firefox",
+        "processNames": ["firefox", "firefox.exe"],
+        "updateType": "default"
     },
     "FirefoxESR": {
         "displayName": "Mozilla Firefox ESR",
@@ -17,7 +21,9 @@
     "AdobeReader": {
         "displayName": "Adobe Reader DC",
         "packageId": "adobereader",
-        "processNames": ["acrord32", "acrord32.exe"]
+        "wingetId": "Adobe.Acrobat.Reader.64-bit",
+        "processNames": ["acrord32", "acrord32.exe"],
+        "updateType": "default"
     },
     "AdobeAcrobat": {
         "displayName": "Adobe Acrobat DC",

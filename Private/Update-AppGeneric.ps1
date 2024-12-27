@@ -1,5 +1,5 @@
 function Update-AppGeneric {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
         [PSCustomObject]$Config,
@@ -19,7 +19,7 @@ function Update-AppGeneric {
     
     Write-AppLog -Message "Starting update for $($Config.displayName)" -LogPath $LogPath
     
-    # Check if app is running
+    # Handle process closing if needed
     if ($ForceClose) {
         foreach ($process in $Config.processNames) {
             try {
@@ -27,6 +27,7 @@ function Update-AppGeneric {
                 if ($runningProcesses) {
                     Write-AppLog -Message "Closing $process" -Level Warning -LogPath $LogPath
                     $runningProcesses | Stop-Process -Force
+                    Start-Sleep -Seconds 2  # Give processes time to close
                 }
             }
             catch {
@@ -34,14 +35,8 @@ function Update-AppGeneric {
             }
         }
     }
-    
-    # Handle legacy versions if defined
-    if ($Config.legacyAction -eq "uninstall") {
-        Write-AppLog -Message "Checking for legacy versions" -LogPath $LogPath
-        # Implementation needed for legacy version handling
-    }
-    
-    # Update using winget with retry logic
+
+    # Perform update based on update type
     $attempt = 1
     $success = $false
     
@@ -49,20 +44,65 @@ function Update-AppGeneric {
         try {
             Write-AppLog -Message "Update attempt $attempt of $MaxRetries" -LogPath $LogPath
             
-            $command = "winget upgrade --id $($Config.wingetId)"
-            if ($Force) {
-                $command += " --force"
-            }
-            
-            $result = Invoke-Expression $command
-            
-            if ($LASTEXITCODE -eq 0) {
-                $success = $true
-                Write-AppLog -Message "Successfully updated $($Config.displayName)" -LogPath $LogPath
-                break
-            }
-            else {
-                Write-AppLog -Message "Attempt $attempt failed with exit code $LASTEXITCODE" -Level Warning -LogPath $LogPath
+            switch ($Config.updateType) {
+                'adobe' {
+                    # Get version info
+                    $versionInfo = Get-AdobeVersion -LogPath $LogPath
+                    if (-not $versionInfo.NeedsUpdate) {
+                        Write-AppLog "Adobe Acrobat is up to date" -LogPath $LogPath
+                        return $true
+                    }
+
+                    if ($PSCmdlet.ShouldProcess($Config.displayName, "Update from $($versionInfo.Installed) to $($versionInfo.Latest)")) {
+                        # Construct update URL using Adobe's pattern
+                        $updateUrl = "https://ardownload2.adobe.com/pub/adobe/acrobat/win/AcrobatDC/$($versionInfo.Latest)/AcroRdrDCUpd$($versionInfo.Latest).msp"
+                        $updateFile = Join-Path $env:TEMP "AcrobatUpdate_$($versionInfo.Latest).msp"
+                        
+                        # Download update package
+                        Write-AppLog "Downloading Adobe update package" -LogPath $LogPath
+                        Invoke-WebRequest -Uri $updateUrl -OutFile $updateFile
+                        
+                        if (-not (Test-Path $updateFile)) {
+                            throw "Update package download failed"
+                        }
+                        
+                        # Install update
+                        $arguments = @(
+                            "/p `"$updateFile`""  # Patch
+                            "/qn"                 # Silent
+                            "/norestart"          # Prevent automatic restart
+                            "/l*v `"$env:TEMP\AdobeUpdate_$($versionInfo.Latest).log`""  # Logging
+                        )
+                        
+                        $result = Start-Process -FilePath "msiexec.exe" -ArgumentList ($arguments -join ' ') -Wait -PassThru
+                        
+                        # Cleanup
+                        Remove-Item $updateFile -Force -ErrorAction SilentlyContinue
+                        
+                        if ($result.ExitCode -in @(0, 3010)) {
+                            $success = $true
+                            Write-AppLog "Adobe update installed successfully" -LogPath $LogPath
+                            break
+                        }
+                        throw "Update failed with exit code: $($result.ExitCode)"
+                    }
+                }
+                
+                default {
+                    # Standard Winget update
+                    $command = "winget upgrade --id $($Config.wingetId)"
+                    if ($Force) {
+                        $command += " --force"
+                    }
+                    
+                    $result = Invoke-Expression $command
+                    if ($LASTEXITCODE -eq 0) {
+                        $success = $true
+                        Write-AppLog -Message "Successfully updated $($Config.displayName)" -LogPath $LogPath
+                        break
+                    }
+                    throw "Update failed with exit code: $LASTEXITCODE"
+                }
             }
         }
         catch {
@@ -79,4 +119,6 @@ function Update-AppGeneric {
         Write-AppLog -Message "Failed to update $($Config.displayName) after $MaxRetries attempts" -Level Error -LogPath $LogPath
         throw "Failed to update $($Config.displayName)"
     }
+    
+    return $success
 } 

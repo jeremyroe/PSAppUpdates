@@ -1,6 +1,6 @@
 # PSAppUpdates
 
-Manage Windows application updates using Chocolatey and OSQuery. This PowerShell module provides simple commands to check and install updates for common Windows applications.
+Manage Windows application updates using Chocolatey, Winget, and vendor-specific update methods. This PowerShell module provides simple commands to check and install updates for common Windows applications.
 
 ## Quick Install
 
@@ -41,8 +41,10 @@ The module automatically installs and maintains:
 
 ## Currently Supported Apps
 
-- Google Chrome
-- Adobe Acrobat DC (Continuous track)
+- Google Chrome (via Winget)
+- Mozilla Firefox (via Winget)
+- Adobe Reader DC (via Winget)
+- Adobe Acrobat DC (via direct MSP updates)
 
 ## Common Parameters
 
@@ -68,8 +70,20 @@ Update-Apps -All -Verbose
 ## Features
 
 - Automatic prerequisite installation
+- Multiple update methods:
+  - Winget package updates
+  - Adobe direct MSP updates
+  - More methods coming soon
 - Process handling for running apps
 - Detailed logging
 - Update verification
 - Version comparison
-- Vendor-specific update handling
+
+## Update Methods
+
+The module supports different update methods based on the application:
+
+- **Default**: Uses Winget for standard package updates
+- **Adobe**: Uses direct MSP patches from Adobe's servers for Acrobat DC updates
+
+The update method is handled automatically based on the application configuration.

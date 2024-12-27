@@ -72,6 +72,28 @@ $tests = @(
                 }
             }
         }
+    },
+    @{
+        Name = "Adobe Update Check"
+        Test = {
+            $config = Get-AppConfig -Application "AdobeAcrobat"
+            if ($config.updateType -ne "adobe") {
+                throw "Adobe Acrobat configuration missing or incorrect"
+            }
+            
+            $versionInfo = Get-AdobeVersion
+            if (-not $versionInfo) {
+                throw "Failed to get Adobe version information"
+            }
+            
+            if (-not $versionInfo.ContainsKey('Installed')) {
+                throw "Adobe version check missing installed version"
+            }
+            
+            if (-not $versionInfo.ContainsKey('Latest')) {
+                throw "Adobe version check missing latest version"
+            }
+        }
     }
 )
 
